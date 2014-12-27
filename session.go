@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	endpoint  = "streams.kiva.org"
 	protocol  = 1
 	transport = "websocket"
 	readLimit = 65536
@@ -33,11 +34,12 @@ type session struct {
 	protocol         int
 }
 
-func NewSession(host string) (Session, error) {
-	url := fmt.Sprintf("http://%s/socket.io/%d?t=%d", host, protocol, time.Now().Unix())
-	fmt.Println(url)
+var handshakeURL = func() string {
+	return fmt.Sprintf("http://%s/socket.io/%d?t=%d", endpoint, protocol, clock.Now().Unix())
+}
 
-	resp, err := http.Get(url)
+func NewSession(host string) (Session, error) {
+	resp, err := http.Get(handshakeURL())
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
