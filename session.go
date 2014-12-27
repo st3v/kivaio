@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/st3v/tracerr"
 )
 
@@ -24,9 +23,8 @@ type Session interface {
 }
 
 type session struct {
-	socket           *websocket.Conn
-	handler          SocketHandler
-	socketId         string
+	socket           Socket
+	socketID         string
 	heartbeatTimeout time.Duration
 	closeTimeout     time.Duration
 	transports       []string
@@ -54,7 +52,7 @@ func NewSession(host string) (Session, error) {
 	parts := strings.Split(string(result), ":")
 
 	session := &session{
-		socketId:         parts[0],
+		socketID:         parts[0],
 		heartbeatTimeout: parseDuration(parts[1]),
 		closeTimeout:     parseDuration(parts[2]),
 		transports:       strings.Split(parts[3], ","),
@@ -68,40 +66,15 @@ func NewSession(host string) (Session, error) {
 func (s *session) Connect(name string) (<-chan string, error) {
 	name = fmt.Sprintf("/%s", name)
 
-	err := s.openSocket()
-	if err != nil {
-		return nil, tracerr.Wrap(err)
+	if s.socket == nil {
+		socket, err := openSocket(s.host, s.socketID, s.protocol, s.closeTimeout)
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		s.socket = socket
 	}
 
-	return s.handler.OpenChannel(name)
-}
-
-func (s *session) openSocket() error {
-	if s.socket != nil {
-		return nil
-	}
-
-	url := fmt.Sprintf("ws://%s/socket.io/%d/%s/%s", s.host, s.protocol, transport, s.socketId)
-	fmt.Println(url)
-
-	socket, resp, err := websocket.DefaultDialer.Dial(url, http.Header{})
-
-	if resp != nil && resp.StatusCode == http.StatusUnauthorized {
-		bodyData, _ := ioutil.ReadAll(resp.Body)
-		return tracerr.Wrap(fmt.Errorf("Response error: %s\n", string(bodyData)))
-	}
-
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-
-	s.socket = socket
-	s.socket.SetReadLimit(readLimit)
-
-	s.handler = newSocketHandler(newListener(s.socket, s.closeTimeout), newSender(s.socket))
-	s.handler.Handle()
-
-	return nil
+	return s.socket.OpenChannel(name)
 }
 
 func parseDuration(str string) time.Duration {
