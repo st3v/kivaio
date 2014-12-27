@@ -8,39 +8,39 @@ import (
 	"github.com/st3v/tracerr"
 )
 
-type Handler interface {
+type SocketHandler interface {
 	Handle()
-	AddChannel(name string) (<-chan string, error)
+	OpenChannel(name string) (<-chan string, error)
 }
 
-type handler struct {
+type socketHandler struct {
 	listener       Listener
 	sender         Sender
 	channels       map[string]Channel
 	socketMessages <-chan message
 }
 
-func newHandler(listener Listener, sender Sender) *handler {
-	return &handler{
+func newSocketHandler(listener Listener, sender Sender) SocketHandler {
+	return &socketHandler{
 		listener: listener,
 		sender:   sender,
 		channels: make(map[string]Channel),
 	}
 }
 
-func (h *handler) AddChannel(name string) (<-chan string, error) {
-	if h.channels[name] == nil {
-		channel, err := newChannel(name, h.sender)
+func (s *socketHandler) OpenChannel(name string) (<-chan string, error) {
+	if s.channels[name] == nil {
+		channel, err := newChannel(name, s.sender)
 		if err != nil {
 			return nil, tracerr.Wrap(err)
 		}
-		h.channels[name] = channel
+		s.channels[name] = channel
 	}
-	return h.channels[name].Messages(), nil
+	return s.channels[name].Messages(), nil
 }
 
-func (h *handler) Handle() {
-	socketMessages, ready := h.listener.Listen()
+func (s *socketHandler) Handle() {
+	socketMessages, ready := s.listener.Listen()
 
 	if <-ready == true {
 		go func() {
@@ -56,13 +56,13 @@ func (h *handler) Handle() {
 					}
 				case HEARTBEAT:
 					fmt.Printf("Heartbeat: %s\n", time.Now())
-					err := h.sender.Send(fmt.Sprintf("%d::", HEARTBEAT))
+					err := s.sender.Send(fmt.Sprintf("%d::", HEARTBEAT))
 					if err != nil {
 						log.Printf("Error sending heartbeat: %s\n", err.Error())
 						continue
 					}
 				case MESSAGE:
-					c := h.channels[socketMessage.endpoint]
+					c := s.channels[socketMessage.endpoint]
 					if c != nil {
 						c.Received(socketMessage.data)
 					}

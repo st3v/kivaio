@@ -24,7 +24,7 @@ type Session interface {
 
 type session struct {
 	socket           *websocket.Conn
-	handler          Handler
+	handler          SocketHandler
 	socketId         string
 	heartbeatTimeout time.Duration
 	closeTimeout     time.Duration
@@ -71,7 +71,7 @@ func (s *session) Connect(name string) (<-chan string, error) {
 		return nil, tracerr.Wrap(err)
 	}
 
-	return s.handler.AddChannel(name)
+	return s.handler.OpenChannel(name)
 }
 
 func (s *session) openSocket() error {
@@ -96,7 +96,7 @@ func (s *session) openSocket() error {
 	s.socket = socket
 	s.socket.SetReadLimit(readLimit)
 
-	s.handler = newHandler(newListener(s.socket, s.closeTimeout), newSender(s.socket))
+	s.handler = newSocketHandler(newListener(s.socket, s.closeTimeout), newSender(s.socket))
 	s.handler.Handle()
 
 	return nil
