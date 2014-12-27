@@ -1,7 +1,6 @@
 package kivaio
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,7 +25,7 @@ var socketURL = func(host, socketID string, protocol int) string {
 
 func (s *socket) OpenChannel(name string) (<-chan string, error) {
 	if s.conn == nil {
-		return nil, tracerr.Wrap(errors.New("SocketHandler not initialized"))
+		return nil, tracerr.Error("SocketHandler not initialized")
 	}
 	return s.handler.OpenChannel(name)
 }
@@ -38,7 +37,7 @@ func openSocket(host, socketID string, protocol int, closeTimeout time.Duration)
 
 	if resp != nil && resp.StatusCode == http.StatusUnauthorized {
 		bodyData, _ := ioutil.ReadAll(resp.Body)
-		return nil, tracerr.Wrap(fmt.Errorf("Response error: %s\n", string(bodyData)))
+		return nil, tracerr.Errorf("Response error: %s\n", string(bodyData))
 	}
 
 	if err != nil {
