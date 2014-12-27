@@ -9,7 +9,7 @@ import (
 func main() {
 	fmt.Println("Starting Client")
 
-	session, err := kivaio.NewSession("streams.kiva.org")
+	session, err := kivaio.NewSession()
 	if err != nil {
 		fmt.Printf("Error opening session: %s\n", err.Error())
 	}

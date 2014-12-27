@@ -36,7 +36,7 @@ var handshakeURL = func() string {
 	return fmt.Sprintf("http://%s/socket.io/%d?t=%d", endpoint, protocol, clock.Now().Unix())
 }
 
-func NewSession(host string) (Session, error) {
+func NewSession() (Session, error) {
 	resp, err := http.Get(handshakeURL())
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -56,7 +56,7 @@ func NewSession(host string) (Session, error) {
 		heartbeatTimeout: parseDuration(parts[1]),
 		closeTimeout:     parseDuration(parts[2]),
 		transports:       strings.Split(parts[3], ","),
-		host:             host,
+		host:             endpoint,
 		protocol:         protocol,
 	}
 
