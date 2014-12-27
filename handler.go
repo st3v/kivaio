@@ -1,8 +1,11 @@
-package socketio
+package kivaio
 
 import (
 	"fmt"
+	"log"
 	"time"
+
+	"github.com/st3v/tracerr"
 )
 
 type Handler interface {
@@ -29,8 +32,7 @@ func (h *handler) AddChannel(name string) (<-chan string, error) {
 	if h.channels[name] == nil {
 		channel, err := newChannel(name, h.sender)
 		if err != nil {
-			fmt.Printf("Error instantiating new channel: %s\n", err.Error())
-			return nil, err
+			return nil, tracerr.Wrap(err)
 		}
 		h.channels[name] = channel
 	}
@@ -48,14 +50,15 @@ func (h *handler) Handle() {
 				switch socketMessage.category {
 				case CONNECT:
 					if socketMessage.endpoint != "" {
-						fmt.Printf("Connected to channel '%s'\n", socketMessage.endpoint)
+						log.Printf("Connected to channel '%s'\n", socketMessage.endpoint)
 					} else {
-						fmt.Println("Connected to socket")
+						log.Println("Connected to socket")
 					}
 				case HEARTBEAT:
 					fmt.Printf("Heartbeat: %s\n", time.Now())
 					err := h.sender.Send(fmt.Sprintf("%d::", HEARTBEAT))
 					if err != nil {
+						log.Printf("Error sending heartbeat: %s\n", err.Error())
 						continue
 					}
 				case MESSAGE:

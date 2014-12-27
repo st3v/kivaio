@@ -1,6 +1,10 @@
-package socketio
+package kivaio
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/st3v/tracerr"
+)
 
 type Channel interface {
 	Received(message string)
@@ -15,8 +19,7 @@ type channel struct {
 func newChannel(name string, sender Sender) (Channel, error) {
 	err := sender.Send(fmt.Sprintf("%d::%s", CONNECT, name))
 	if err != nil {
-		fmt.Printf("Error sending connect message for channel '%s': %s\n", name, err.Error())
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	return &channel{

@@ -1,9 +1,10 @@
-package socketio
+package kivaio
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
+
+	"github.com/st3v/tracerr"
 )
 
 type Parser interface {
@@ -22,8 +23,7 @@ func (p *parser) Parse(data string) (*message, error) {
 
 	category, err := strconv.Atoi(parts[1])
 	if err != nil {
-		fmt.Printf("Error converting message category '%s' to int: %s\n", parts[1], err.Error())
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	return &message{

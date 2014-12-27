@@ -1,10 +1,10 @@
-package socketio
+package kivaio
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/gorilla/websocket"
+	"github.com/st3v/tracerr"
 )
 
 type Sender interface {
@@ -23,15 +23,13 @@ func newSender(socket *websocket.Conn) Sender {
 
 func (s *sender) Send(message string) error {
 	if s.socket == nil {
-		err := errors.New("Socket Not Initialized")
-		fmt.Printf("Error sending message: %s\n", err.Error())
-		return err
+		err := errors.New("Socket not initialized")
+		return tracerr.Wrap(err)
 	}
 
 	writer, err := s.socket.NextWriter(1)
 	if err != nil {
-		fmt.Printf("Error obtaining writer from socket: %s\n", err.Error())
-		return err
+		return tracerr.Wrap(err)
 	}
 
 	writer.Write([]byte(message))

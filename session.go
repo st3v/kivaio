@@ -1,4 +1,4 @@
-package socketio
+package kivaio
 
 import (
 	"fmt"
@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/st3v/tracerr"
 )
 
 const (
 	protocol  = 1
 	transport = "websocket"
-	readLimit = 32678
+	readLimit = 65536
 )
 
 type Session interface {
@@ -38,13 +39,13 @@ func NewSession(host string) (Session, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	result, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 	fmt.Println(string(result))
 
@@ -67,8 +68,7 @@ func (s *session) Connect(name string) (<-chan string, error) {
 
 	err := s.openSocket()
 	if err != nil {
-		fmt.Printf("Error opening websocket: %s\n", err.Error())
-		return nil, err
+		return nil, tracerr.Wrap(err)
 	}
 
 	return s.handler.AddChannel(name)
@@ -86,13 +86,11 @@ func (s *session) openSocket() error {
 
 	if resp != nil && resp.StatusCode == http.StatusUnauthorized {
 		bodyData, _ := ioutil.ReadAll(resp.Body)
-		fmt.Printf("Response error: %s\n", string(bodyData))
-		return err
+		return tracerr.Wrap(fmt.Errorf("Response error: %s\n", string(bodyData)))
 	}
 
 	if err != nil {
-		fmt.Printf("Error dialing server: %s\n", err.Error())
-		return err
+		return tracerr.Wrap(err)
 	}
 
 	s.socket = socket

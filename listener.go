@@ -1,7 +1,7 @@
-package socketio
+package kivaio
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -35,12 +35,12 @@ func (l *listener) Listen() (<-chan *message, <-chan bool) {
 		for {
 			_, p, err := l.socket.ReadMessage()
 			if err != nil {
-				fmt.Printf("Error reading message: %s\n", err.Error())
+				log.Printf("Error reading message: %s\n", err.Error())
 				continue
 			}
 			message, err := parser.Parse(string(p))
 			if err != nil {
-				fmt.Printf("Error parsing message: %s\n", err.Error())
+				log.Printf("Error parsing message: %s\n", err.Error())
 				continue
 			}
 

@@ -1,4 +1,4 @@
-package socketio
+package kivaio
 
 const (
 	DISCONNECT = 0
