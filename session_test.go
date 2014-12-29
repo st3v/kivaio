@@ -23,33 +23,16 @@ func TestNewSession(t *testing.T) {
 	expectedSocketID := "fake-socket-id"
 	expectedHeartbeatTimeout := 12
 	expectedCloseTimeout := 34
-	expectedTransports := []string{"fake-transport-1", "fake-transport-2", "fake-transport-3"}
+	expectedTransports := []string{"websocket", "fake-transport-1", "fake-transport-2"}
 
-	handshakeRequested := false
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handshakeRequested = true
-
-		if r.Method != "GET" {
-			t.Fatalf("Unexpected request method: %s", r.Method)
-		}
-
-		fmt.Fprintf(
-			w,
-			"%s:%d:%d:%s",
-			expectedSocketID,
-			expectedHeartbeatTimeout,
-			expectedCloseTimeout,
-			strings.Join(expectedTransports, ","),
-		)
-
-		return
-	}))
+	server := mockHandshakeServer(
+		expectedSocketID,
+		expectedHeartbeatTimeout,
+		expectedCloseTimeout,
+		expectedTransports,
+		t,
+	)
 	defer server.Close()
-
-	handshakeURL = func() string {
-		return server.URL
-	}
 
 	session, err := NewSession()
 
@@ -57,16 +40,12 @@ func TestNewSession(t *testing.T) {
 		t.Errorf("Unexpected error returned by NewSession: %s", err.Error())
 	}
 
-	if !handshakeRequested {
-		t.Error("Handshake expected but did not happen.")
-	}
-
 	if session.socketID != expectedSocketID {
 		t.Errorf("Unexpected socketID. Want: '%s'. Got: '%s'.", expectedSocketID, session.socketID)
 	}
 
 	if session.heartbeatTimeout != time.Duration(expectedHeartbeatTimeout)*time.Second {
-		t.Errorf("Unexpected hartbeat timeout in session.")
+		t.Errorf("Unexpected heartbeat timeout in session.")
 	}
 
 	if session.closeTimeout != time.Duration(expectedCloseTimeout)*time.Second {
@@ -93,4 +72,61 @@ func TestNewSession(t *testing.T) {
 			)
 		}
 	}
+}
+
+func TestNewSessionUnsupportedTransport(t *testing.T) {
+	expectedSocketID := "fake-socket-id"
+	expectedHeartbeatTimeout := 12
+	expectedCloseTimeout := 34
+	expectedTransports := []string{"fake-transport-1", "fake-transport-2", "fake-transport-3"}
+
+	server := mockHandshakeServer(
+		expectedSocketID,
+		expectedHeartbeatTimeout,
+		expectedCloseTimeout,
+		expectedTransports,
+		t,
+	)
+	defer server.Close()
+
+	_, err := NewSession()
+
+	if err == nil {
+		t.Fatal("Expected error but got none.")
+	}
+
+	if !strings.HasPrefix(err.Error(), "Transport 'websocket' not supported by server") {
+		t.Errorf("Unexpected error: %s", err)
+	}
+}
+
+func mockHandshakeServer(
+	expectedSocketID string,
+	expectedHeartbeatTimeout int,
+	expectedCloseTimeout int,
+	expectedTransports []string,
+	t *testing.T,
+) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			t.Fatalf("Unexpected request method: %s", r.Method)
+		}
+
+		fmt.Fprintf(
+			w,
+			"%s:%d:%d:%s",
+			expectedSocketID,
+			expectedHeartbeatTimeout,
+			expectedCloseTimeout,
+			strings.Join(expectedTransports, ","),
+		)
+
+		return
+	}))
+
+	handshakeURL = func() string {
+		return server.URL
+	}
+
+	return server
 }

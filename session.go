@@ -53,7 +53,7 @@ func NewSession() (*session, error) {
 	transports := strings.Split(parts[3], ",")
 	err = assertTransport(transports)
 	if err != nil {
-		tracerr.Wrap(err)
+		return nil, tracerr.Wrap(err)
 	}
 
 	session := &session{
