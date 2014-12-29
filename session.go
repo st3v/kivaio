@@ -36,7 +36,7 @@ var handshakeURL = func() string {
 	return fmt.Sprintf("http://%s/socket.io/%d?t=%d", endpoint, protocol, clock.Now().Unix())
 }
 
-func NewSession() (Session, error) {
+func NewSession() (*session, error) {
 	resp, err := http.Get(handshakeURL())
 	if err != nil {
 		return nil, tracerr.Wrap(err)
@@ -47,15 +47,20 @@ func NewSession() (Session, error) {
 	if err != nil {
 		return nil, tracerr.Wrap(err)
 	}
-	fmt.Println(string(result))
 
 	parts := strings.Split(string(result), ":")
+
+	transports := strings.Split(parts[3], ",")
+	err = assertTransport(transports)
+	if err != nil {
+		tracerr.Wrap(err)
+	}
 
 	session := &session{
 		socketID:         parts[0],
 		heartbeatTimeout: parseDuration(parts[1]),
 		closeTimeout:     parseDuration(parts[2]),
-		transports:       strings.Split(parts[3], ","),
+		transports:       transports,
 		host:             endpoint,
 		protocol:         protocol,
 	}
@@ -75,6 +80,15 @@ func (s *session) Connect(name string) (<-chan string, error) {
 	}
 
 	return s.socket.OpenChannel(name)
+}
+
+func assertTransport(transports []string) error {
+	for _, t := range transports {
+		if t == transport {
+			return nil
+		}
+	}
+	return tracerr.Errorf("Transport '%s' not supported by server.", transport)
 }
 
 func parseDuration(str string) time.Duration {
