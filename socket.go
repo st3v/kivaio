@@ -30,7 +30,7 @@ func (s *socket) OpenChannel(name string) (<-chan string, error) {
 	return s.handler.OpenChannel(name)
 }
 
-func openSocket(host, socketID string, protocol int, closeTimeout time.Duration) (Socket, error) {
+var openSocket = func(host, socketID string, protocol int, closeTimeout time.Duration) (Socket, error) {
 	url := socketURL(host, socketID, protocol)
 
 	conn, resp, err := websocket.DefaultDialer.Dial(url, http.Header{})

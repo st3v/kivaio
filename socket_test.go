@@ -9,3 +9,11 @@ func TestSocketURL(t *testing.T) {
 		t.Errorf("Unexpected socket URL. Want: '%s'. Got: '%s'.", expectedURL, actualURL)
 	}
 }
+
+type mockSocket struct {
+	openChannel func(name string) (<-chan string, error)
+}
+
+func (m *mockSocket) OpenChannel(name string) (<-chan string, error) {
+	return m.openChannel(name)
+}

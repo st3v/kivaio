@@ -1,6 +1,7 @@
 package kivaio
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -98,6 +99,131 @@ func TestNewSessionUnsupportedTransport(t *testing.T) {
 	if !strings.HasPrefix(err.Error(), "Transport 'websocket' not supported by server") {
 		t.Errorf("Unexpected error: %s", err)
 	}
+}
+
+func TestSessionConnectNoSlash(t *testing.T) {
+	expectedHost := "fake-hostname"
+	expectedSocketID := "fake-socket-id"
+	expectedProtocol := 123
+	expectedCloseTimeout := time.Duration(456) * time.Second
+	expectedChannel := "fake-channel"
+	expectedChan := make(<-chan string)
+	expectedError := errors.New("Expected Error")
+
+	mockSession := mockSocketOpenChannel(
+		expectedHost,
+		expectedSocketID,
+		expectedProtocol,
+		expectedCloseTimeout,
+		fmt.Sprintf("/%s", expectedChannel),
+		expectedChan,
+		expectedError,
+		t,
+	)
+
+	actualChan, actualError := mockSession.Connect(expectedChannel)
+
+	if actualChan != expectedChan {
+		t.Errorf("Unexpected chan returned by Connect().")
+	}
+
+	if actualError != expectedError {
+		t.Errorf(
+			"Unexpected error returned by Connect(). Want: '%s'. Got: '%s'.",
+			expectedError,
+			actualError,
+		)
+	}
+}
+
+func TestSessionConnectSlash(t *testing.T) {
+	expectedHost := "fake-hostname"
+	expectedSocketID := "fake-socket-id"
+	expectedProtocol := 123
+	expectedCloseTimeout := time.Duration(456) * time.Second
+	expectedChannel := "/fake-channel"
+	expectedChan := make(<-chan string)
+	expectedError := errors.New("Expected Error")
+
+	mockSession := mockSocketOpenChannel(
+		expectedHost,
+		expectedSocketID,
+		expectedProtocol,
+		expectedCloseTimeout,
+		expectedChannel,
+		expectedChan,
+		expectedError,
+		t,
+	)
+
+	actualChan, actualError := mockSession.Connect(expectedChannel)
+
+	if actualChan != expectedChan {
+		t.Errorf("Unexpected chan returned by Connect().")
+	}
+
+	if actualError != expectedError {
+		t.Errorf(
+			"Unexpected error returned by Connect(). Want: '%s'. Got: '%s'.",
+			expectedError,
+			actualError,
+		)
+	}
+}
+
+func mockSocketOpenChannel(
+	expectedHost string,
+	expectedSocketID string,
+	expectedProtocol int,
+	expectedCloseTimeout time.Duration,
+	expectedChannelName string,
+	expectedChan <-chan string,
+	expectedError error,
+	t *testing.T,
+) *session {
+	mockSession := &session{
+		socketID:     expectedSocketID,
+		host:         expectedHost,
+		protocol:     expectedProtocol,
+		closeTimeout: expectedCloseTimeout,
+	}
+
+	openSocket = func(host, socketID string, protocol int, closeTimeout time.Duration) (Socket, error) {
+		if host != expectedHost {
+			t.Errorf("Unexpected hostname. Want: '%s'. Got: '%s'.", expectedHost, host)
+		}
+
+		if socketID != expectedSocketID {
+			t.Errorf("Unexpected scoket id. Want: '%s'. Got: '%s'.", expectedSocketID, socketID)
+		}
+
+		if protocol != expectedProtocol {
+			t.Errorf("Unexpected protocol. Want: '%d'. Got: '%d'.", expectedProtocol, protocol)
+		}
+
+		if closeTimeout != expectedCloseTimeout {
+			t.Errorf(
+				"Unexpected close timeout. Want: '%d'. Got: '%d'.",
+				expectedCloseTimeout.Seconds(),
+				closeTimeout.Seconds(),
+			)
+		}
+
+		return &mockSocket{
+			openChannel: func(name string) (<-chan string, error) {
+				if name != expectedChannelName {
+					t.Errorf(
+						"Unexpected channel name passed to socket. Want: '%s'. Got: '%s'.",
+						expectedChannelName,
+						name,
+					)
+				}
+				return expectedChan, expectedError
+			},
+		}, nil
+	}
+
+	return mockSession
 }
 
 func mockHandshakeServer(

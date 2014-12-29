@@ -69,7 +69,9 @@ func NewSession() (*session, error) {
 }
 
 func (s *session) Connect(name string) (<-chan string, error) {
-	name = fmt.Sprintf("/%s", name)
+	if !strings.HasPrefix(name, "/") {
+		name = fmt.Sprintf("/%s", name)
+	}
 
 	if s.socket == nil {
 		socket, err := openSocket(s.host, s.socketID, s.protocol, s.closeTimeout)
