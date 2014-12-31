@@ -97,7 +97,7 @@ func TestNewSessionUnsupportedTransport(t *testing.T) {
 	}
 
 	if !strings.HasPrefix(err.Error(), "Transport 'websocket' not supported by server") {
-		t.Errorf("Unexpected error: %s", err)
+		t.Errorf("Unexpected error: %s", err.Error())
 	}
 }
 
@@ -130,8 +130,8 @@ func TestSessionConnectNoSlash(t *testing.T) {
 	if actualError != expectedError {
 		t.Errorf(
 			"Unexpected error returned by Connect(). Want: '%s'. Got: '%s'.",
-			expectedError,
-			actualError,
+			expectedError.Error(),
+			actualError.Error(),
 		)
 	}
 }
@@ -165,10 +165,35 @@ func TestSessionConnectSlash(t *testing.T) {
 	if actualError != expectedError {
 		t.Errorf(
 			"Unexpected error returned by Connect(). Want: '%s'. Got: '%s'.",
-			expectedError,
-			actualError,
+			expectedError.Error(),
+			actualError.Error(),
 		)
 	}
+}
+
+func TestSessionConnectOpenSocketError(t *testing.T) {
+	expectedErrorMsg := "fake-open-socket-error"
+
+	openSocket = func(host, socketID string, protocol int, closeTimeout time.Duration) (Socket, error) {
+		return nil, errors.New(expectedErrorMsg)
+	}
+
+	session := &session{}
+
+	msgChan, err := session.Connect("/fake-channel")
+
+	if !strings.HasPrefix(err.Error(), expectedErrorMsg) {
+		t.Errorf(
+			"Unexpected error returned by Connect(). Want: '%s'. Got: '%s'.",
+			expectedErrorMsg,
+			err.Error(),
+		)
+	}
+
+	if msgChan != nil {
+		t.Error("Expected returned channel to be nil. It's not.")
+	}
+
 }
 
 func mockSocketOpenChannel(
