@@ -25,7 +25,7 @@ var socketURL = func(host, socketID string, protocol int) string {
 
 func (s *socket) OpenChannel(name string) (<-chan string, error) {
 	if s.conn == nil {
-		return nil, tracerr.Error("SocketHandler not initialized")
+		return nil, tracerr.Error("Socket connection not initialized")
 	}
 	return s.handler.OpenChannel(name)
 }
